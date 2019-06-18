@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Entity;
+using System.Data.Entity.Infrastructure;
 using System.Linq;
 using System.Net;
 using System.Web;
@@ -37,10 +38,19 @@ namespace ContosoUniversity.Controllers
             return View(course);
         }
 
+        private void PopulateDepartmentsDropDownList(object selectedDepartment = null)
+        {
+            var departmentsQuery = from d in db.Departments
+                                   orderby d.Name
+                                   select d;
+            ViewBag.DepartmentID = new SelectList(departmentsQuery, "DepartmentID", "Name", selectedDepartment);
+        }
+
         // GET: Course/Create
         public ActionResult Create()
         {
-            ViewBag.DepartmentID = new SelectList(db.Departments, "DepartmentID", "Name");
+            //ViewBag.DepartmentID = new SelectList(db.Departments, "DepartmentID", "Name");
+            PopulateDepartmentsDropDownList();
             return View();
         }
 
@@ -51,14 +61,23 @@ namespace ContosoUniversity.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult Create([Bind(Include = "CourseID,Title,Credits,DepartmentID")] Course course)
         {
-            if (ModelState.IsValid)
+            try
             {
-                db.Courses.Add(course);
-                db.SaveChanges();
-                return RedirectToAction("Index");
-            }
+                if (ModelState.IsValid)
+                {
+                    db.Courses.Add(course);
+                    db.SaveChanges();
+                    return RedirectToAction("Index");
+                }
 
-            ViewBag.DepartmentID = new SelectList(db.Departments, "DepartmentID", "Name", course.DepartmentID);
+            }
+            catch (RetryLimitExceededException /* dex */)
+            {
+                //Log the error (uncomment dex variable name and add a line here to write a log.)
+                ModelState.AddModelError("", "Unable to save changes. Try again, and if the problem persists, see your system administrator.");
+            }
+            PopulateDepartmentsDropDownList(course.DepartmentID);
+            //ViewBag.DepartmentID = new SelectList(db.Departments, "DepartmentID", "Name", course.DepartmentID);
             return View(course);
         }
 
@@ -74,7 +93,8 @@ namespace ContosoUniversity.Controllers
             {
                 return HttpNotFound();
             }
-            ViewBag.DepartmentID = new SelectList(db.Departments, "DepartmentID", "Name", course.DepartmentID);
+            //ViewBag.DepartmentID = new SelectList(db.Departments, "DepartmentID", "Name", course.DepartmentID);
+            PopulateDepartmentsDropDownList(course.DepartmentID);
             return View(course);
         }
 
@@ -91,7 +111,8 @@ namespace ContosoUniversity.Controllers
                 db.SaveChanges();
                 return RedirectToAction("Index");
             }
-            ViewBag.DepartmentID = new SelectList(db.Departments, "DepartmentID", "Name", course.DepartmentID);
+            //ViewBag.DepartmentID = new SelectList(db.Departments, "DepartmentID", "Name", course.DepartmentID);
+            PopulateDepartmentsDropDownList(course.DepartmentID);
             return View(course);
         }
 
